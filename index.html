@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Memento Mori Calendar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <canvas id="ambientCanvas" aria-hidden="true"></canvas>
+    <main class="app-shell">
+      <section class="control-panel" aria-label="Calendar controls">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <div>
+            <h1>Memento Mori</h1>
+            <p>A living calendar made of days.</p>
+          </div>
+        </div>
+
+        <div class="progress-ring" aria-label="Life progress">
+          <svg viewBox="0 0 120 120" role="img">
+            <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+            <circle id="ringProgress" class="ring-progress" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div>
+            <strong id="progressPercent">0%</strong>
+            <span>life used</span>
+          </div>
+        </div>
+
+        <form id="controls" class="controls">
+          <label>
+            <span>Birth date</span>
+            <input id="birthDate" type="date" value="2000-04-16" />
+          </label>
+
+          <label>
+            <span>Calendar date</span>
+            <input id="currentDate" type="date" />
+          </label>
+
+          <div class="age-grid">
+            <label>
+              <span>Age years</span>
+              <input id="ageYears" type="number" min="0" value="26" />
+            </label>
+            <label>
+              <span>Age days</span>
+              <input id="ageDays" type="number" min="0" value="0" />
+            </label>
+          </div>
+
+          <label>
+            <span>Assumed lifespan <b id="lifespanValue">90</b></span>
+            <input id="lifespan" type="range" min="60" max="110" value="90" />
+          </label>
+
+          <div class="segmented" role="group" aria-label="Calendar density">
+            <button class="active" type="button" data-mode="day">Days</button>
+            <button type="button" data-mode="week">Weeks</button>
+          </div>
+
+          <div class="button-row">
+            <button type="button" id="updateButton">Update</button>
+            <button type="button" id="todayButton">Today</button>
+          </div>
+          <div class="button-row">
+            <button type="button" id="ageButton">Set Date From Age</button>
+            <button type="button" id="copyButton">Copy Summary</button>
+          </div>
+        </form>
+
+        <div class="legend" aria-label="Legend">
+          <span><i class="lived"></i>Lived</span>
+          <span><i class="now"></i>Now</span>
+          <span><i class="future"></i>Ahead</span>
+        </div>
+      </section>
+
+      <section class="calendar-panel" aria-label="Life calendar">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Your Life Calendar</p>
+            <h2 id="headline">26 years old</h2>
+          </div>
+          <button id="jumpButton" type="button">Jump to Now</button>
+        </div>
+
+        <div class="stats" aria-label="Life statistics">
+          <article>
+            <span>Age</span>
+            <strong id="statAge">26y 0d</strong>
+          </article>
+          <article>
+            <span>Days lived</span>
+            <strong id="statLived">0</strong>
+          </article>
+          <article>
+            <span>Days left</span>
+            <strong id="statLeft">0</strong>
+          </article>
+          <article>
+            <span>Next birthday</span>
+            <strong id="statBirthday">Apr 16</strong>
+          </article>
+        </div>
+
+        <div id="calendarWrap" class="calendar-wrap">
+          <canvas id="calendarCanvas"></canvas>
+          <div id="tooltip" class="tooltip" role="status"></div>
+        </div>
+
+        <p id="status" class="status">Hover the calendar to inspect a day.</p>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

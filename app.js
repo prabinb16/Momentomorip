@@ -1,0 +1,377 @@
+const birthDateInput = document.querySelector("#birthDate");
+const currentDateInput = document.querySelector("#currentDate");
+const ageYearsInput = document.querySelector("#ageYears");
+const ageDaysInput = document.querySelector("#ageDays");
+const lifespanInput = document.querySelector("#lifespan");
+const lifespanValue = document.querySelector("#lifespanValue");
+const updateButton = document.querySelector("#updateButton");
+const todayButton = document.querySelector("#todayButton");
+const ageButton = document.querySelector("#ageButton");
+const copyButton = document.querySelector("#copyButton");
+const jumpButton = document.querySelector("#jumpButton");
+const controlsForm = document.querySelector("#controls");
+const modeButtons = document.querySelectorAll("[data-mode]");
+const ringProgress = document.querySelector("#ringProgress");
+const progressPercent = document.querySelector("#progressPercent");
+const headline = document.querySelector("#headline");
+const statAge = document.querySelector("#statAge");
+const statLived = document.querySelector("#statLived");
+const statLeft = document.querySelector("#statLeft");
+const statBirthday = document.querySelector("#statBirthday");
+const statusText = document.querySelector("#status");
+const calendarWrap = document.querySelector("#calendarWrap");
+const canvas = document.querySelector("#calendarCanvas");
+const ctx = canvas.getContext("2d");
+const tooltip = document.querySelector("#tooltip");
+const ambientCanvas = document.querySelector("#ambientCanvas");
+const ambient = ambientCanvas.getContext("2d");
+
+const dayMs = 24 * 60 * 60 * 1000;
+const ringLength = 2 * Math.PI * 52;
+let mode = "day";
+let metrics = {};
+let stats = null;
+let animationFrame = 0;
+let ambientFrame = 0;
+
+function parseLocalDate(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function toInputDate(value) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addYears(value, years) {
+  const result = new Date(value);
+  result.setFullYear(value.getFullYear() + years);
+  if (result.getMonth() !== value.getMonth()) result.setDate(0);
+  return result;
+}
+
+function addDays(value, days) {
+  const result = new Date(value);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function daysBetween(start, end) {
+  const a = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const b = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  return Math.round((b - a) / dayMs);
+}
+
+function formatDate(value) {
+  return value.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+function formatShortDate(value) {
+  return value.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function calculateStats() {
+  const birthDate = parseLocalDate(birthDateInput.value);
+  const currentDate = parseLocalDate(currentDateInput.value);
+  const lifespanYears = Number(lifespanInput.value);
+  if (Number.isNaN(birthDate.getTime()) || Number.isNaN(currentDate.getTime())) {
+    throw new Error("Use valid dates.");
+  }
+  if (currentDate < birthDate) {
+    throw new Error("Calendar date must be on or after birth date.");
+  }
+
+  const birthdayThisYear = addYears(birthDate, currentDate.getFullYear() - birthDate.getFullYear());
+  const hadBirthday = currentDate >= birthdayThisYear;
+  const ageYears = currentDate.getFullYear() - birthDate.getFullYear() - (hadBirthday ? 0 : 1);
+  const lastBirthday = addYears(birthDate, ageYears);
+  const nextBirthday = addYears(birthDate, ageYears + 1);
+  const deathDate = addYears(birthDate, lifespanYears);
+  const daysLived = Math.max(0, daysBetween(birthDate, currentDate));
+  const totalDays = Math.max(1, daysBetween(birthDate, deathDate));
+  const daysRemaining = Math.max(0, daysBetween(currentDate, deathDate));
+
+  return {
+    birthDate,
+    currentDate,
+    lifespanYears,
+    ageYears,
+    ageDays: Math.max(0, daysBetween(lastBirthday, currentDate)),
+    daysLived,
+    totalDays,
+    weeksLived: Math.floor(daysLived / 7),
+    daysRemaining,
+    nextBirthday,
+    progress: Math.min(1, Math.max(0, daysLived / totalDays)),
+  };
+}
+
+function updateStats() {
+  try {
+    stats = calculateStats();
+    ageYearsInput.value = stats.ageYears;
+    ageDaysInput.value = stats.ageDays;
+    lifespanValue.textContent = stats.lifespanYears;
+    headline.textContent = `${stats.ageYears} years old`;
+    statAge.textContent = `${stats.ageYears}y ${stats.ageDays}d`;
+    statLived.textContent = stats.daysLived.toLocaleString();
+    statLeft.textContent = stats.daysRemaining.toLocaleString();
+    statBirthday.textContent = formatShortDate(stats.nextBirthday);
+    const percent = stats.progress * 100;
+    progressPercent.textContent = `${percent.toFixed(1)}%`;
+    ringProgress.style.strokeDashoffset = String(ringLength * (1 - stats.progress));
+    statusText.textContent = `Showing one square per ${mode}. Hover any square for details.`;
+    drawCalendar(true);
+  } catch (error) {
+    statusText.textContent = error.message;
+  }
+}
+
+function drawCalendar(animate = false) {
+  cancelAnimationFrame(animationFrame);
+  const wrapWidth = Math.max(calendarWrap.clientWidth, 720);
+  const rowGap = mode === "day" ? 5 : 9;
+  const cell = mode === "day" ? 4 : Math.max(8, Math.min(13, Math.floor((wrapWidth - 120) / 60)));
+  const gap = mode === "day" ? 1 : 4;
+  const columns = mode === "day" ? 366 : 52;
+  const left = 54;
+  const top = 28;
+  const label = 42;
+  const width = left + label + columns * (cell + gap) + 140;
+  const height = top + stats.lifespanYears * (cell + rowGap) + 42;
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  metrics = { left, top, label, cell, gap, rowGap, columns, width, height };
+  const duration = animate ? 540 : 1;
+  const start = performance.now();
+
+  function frame(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const reveal = 1 - Math.pow(1 - t, 3);
+    paintCalendar(reveal);
+    if (t < 1) animationFrame = requestAnimationFrame(frame);
+  }
+
+  animationFrame = requestAnimationFrame(frame);
+}
+
+function paintCalendar(reveal) {
+  ctx.clearRect(0, 0, metrics.width, metrics.height);
+  ctx.font = "700 9px Segoe UI, sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+
+  for (let year = 0; year < stats.lifespanYears; year += 1) {
+    const y = metrics.top + year * (metrics.cell + metrics.rowGap);
+    const rowReveal = Math.min(1, Math.max(0, reveal * stats.lifespanYears - year));
+    if (rowReveal <= 0) continue;
+
+    ctx.fillStyle = year % 5 === 0 ? "#d4d4d8" : "#52525b";
+    ctx.globalAlpha = 0.45 + rowReveal * 0.55;
+    ctx.fillText(String(year).padStart(2, "0"), metrics.left, y + metrics.cell / 2);
+
+    if (mode === "day") {
+      paintDayRow(year, y, rowReveal);
+    } else {
+      paintWeekRow(year, y, rowReveal);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  const nowY = metrics.top + Math.min(stats.ageYears, stats.lifespanYears - 1) * (metrics.cell + metrics.rowGap);
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#f59e0b";
+  ctx.font = "800 10px Segoe UI, sans-serif";
+  ctx.fillText("you are here", metrics.left + metrics.label + metrics.columns * (metrics.cell + metrics.gap) + 10, nowY + metrics.cell / 2);
+}
+
+function paintDayRow(year, y, rowReveal) {
+  const birthday = addYears(stats.birthDate, year);
+  const nextBirthday = addYears(stats.birthDate, year + 1);
+  const daysInLifeYear = daysBetween(birthday, nextBirthday);
+  const startIndex = daysBetween(stats.birthDate, birthday);
+  const shownColumns = Math.floor(daysInLifeYear * rowReveal);
+
+  for (let day = 0; day < shownColumns; day += 1) {
+    const index = startIndex + day;
+    if (index >= stats.totalDays) break;
+    drawSquare(day, y, colorFor(index, stats.daysLived), index === stats.daysLived);
+  }
+}
+
+function paintWeekRow(year, y, rowReveal) {
+  const shownColumns = Math.floor(52 * rowReveal);
+  for (let week = 0; week < shownColumns; week += 1) {
+    const index = year * 52 + week;
+    drawSquare(week, y, colorFor(index, stats.weeksLived), index === stats.weeksLived);
+  }
+}
+
+function drawSquare(column, y, color, isNow) {
+  const x = metrics.left + metrics.label + column * (metrics.cell + metrics.gap);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = color.fill;
+  ctx.fillRect(x, y, metrics.cell, metrics.cell);
+  if (isNow) {
+    ctx.strokeStyle = "#fde68a";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - 1, y - 1, metrics.cell + 2, metrics.cell + 2);
+  }
+}
+
+function colorFor(index, currentIndex) {
+  if (index < currentIndex) return { fill: "#71717a" };
+  if (index === currentIndex) return { fill: "#f59e0b" };
+  return { fill: "#14b8a6" };
+}
+
+function periodState(index, currentIndex) {
+  if (index < currentIndex) return "Lived";
+  if (index === currentIndex) return "Current";
+  return "Future";
+}
+
+function inspectCalendar(event) {
+  if (!stats || !metrics.width) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const gridX = x - metrics.left - metrics.label;
+  const gridY = y - metrics.top;
+  const rowHeight = metrics.cell + metrics.rowGap;
+  const columnWidth = metrics.cell + metrics.gap;
+  if (gridX < 0 || gridY < 0) return hideTooltip();
+  const column = Math.floor(gridX / columnWidth);
+  const row = Math.floor(gridY / rowHeight);
+  if (column < 0 || row < 0 || column >= metrics.columns || row >= stats.lifespanYears) return hideTooltip();
+  if (gridX % columnWidth > metrics.cell || gridY % rowHeight > metrics.cell) return hideTooltip();
+
+  let title = "";
+  let body = "";
+  if (mode === "day") {
+    const birthday = addYears(stats.birthDate, row);
+    const nextBirthday = addYears(stats.birthDate, row + 1);
+    const daysInLifeYear = daysBetween(birthday, nextBirthday);
+    if (column >= daysInLifeYear) return hideTooltip();
+    const index = daysBetween(stats.birthDate, birthday) + column;
+    const exactDate = addDays(stats.birthDate, index);
+    title = `Age ${row}, day ${column + 1}`;
+    body = `${periodState(index, stats.daysLived)} day - ${formatDate(exactDate)}`;
+  } else {
+    const index = row * 52 + column;
+    title = `Age ${row}, week ${column + 1}`;
+    body = `${periodState(index, stats.weeksLived)} week`;
+  }
+
+  tooltip.style.display = "block";
+  tooltip.style.left = `${event.clientX}px`;
+  tooltip.style.top = `${event.clientY}px`;
+  tooltip.innerHTML = `<strong>${title}</strong><span>${body}</span>`;
+  statusText.textContent = `${title}: ${body}`;
+}
+
+function hideTooltip() {
+  tooltip.style.display = "none";
+}
+
+function setDateFromAge() {
+  const birth = parseLocalDate(birthDateInput.value);
+  const years = Math.max(0, Number(ageYearsInput.value || 0));
+  const days = Math.max(0, Number(ageDaysInput.value || 0));
+  currentDateInput.value = toInputDate(addDays(addYears(birth, years), days));
+  updateStats();
+}
+
+function copySummary() {
+  const summary = [
+    `Born: ${formatDate(stats.birthDate)}`,
+    `Age: ${stats.ageYears} years and ${stats.ageDays} days`,
+    `Days lived: ${stats.daysLived.toLocaleString()}`,
+    `Days left: ${stats.daysRemaining.toLocaleString()} in a ${stats.lifespanYears}-year calendar`,
+    `Next birthday: ${formatDate(stats.nextBirthday)}`,
+  ].join("\n");
+  navigator.clipboard.writeText(summary);
+  statusText.textContent = "Summary copied to clipboard.";
+}
+
+function jumpToNow() {
+  if (!stats || !metrics.width) return;
+  const y = metrics.top + Math.min(stats.ageYears, stats.lifespanYears - 1) * (metrics.cell + metrics.rowGap);
+  calendarWrap.scrollTop = Math.max(0, y - calendarWrap.clientHeight * 0.42);
+  if (mode === "day") {
+    const x = metrics.left + metrics.label + stats.ageDays * (metrics.cell + metrics.gap);
+    calendarWrap.scrollLeft = Math.max(0, x - calendarWrap.clientWidth * 0.52);
+  }
+}
+
+function resizeAmbient() {
+  const dpr = window.devicePixelRatio || 1;
+  ambientCanvas.width = Math.floor(innerWidth * dpr);
+  ambientCanvas.height = Math.floor(innerHeight * dpr);
+  ambientCanvas.style.width = `${innerWidth}px`;
+  ambientCanvas.style.height = `${innerHeight}px`;
+  ambient.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function animateAmbient(now) {
+  ambient.clearRect(0, 0, innerWidth, innerHeight);
+  const count = Math.max(32, Math.floor(innerWidth / 28));
+  for (let i = 0; i < count; i += 1) {
+    const seed = i * 97.13;
+    const x = (Math.sin(seed) * 0.5 + 0.5) * innerWidth + Math.sin(now / 2400 + i) * 18;
+    const y = (Math.cos(seed * 1.7) * 0.5 + 0.5) * innerHeight + Math.cos(now / 3000 + i) * 18;
+    const radius = 1 + (i % 4) * 0.35;
+    ambient.fillStyle = i % 3 === 0 ? "rgba(56,189,248,0.35)" : i % 3 === 1 ? "rgba(20,184,166,0.28)" : "rgba(251,113,133,0.24)";
+    ambient.beginPath();
+    ambient.arc(x, y, radius, 0, Math.PI * 2);
+    ambient.fill();
+  }
+  ambientFrame = requestAnimationFrame(animateAmbient);
+}
+
+function init() {
+  currentDateInput.value = toInputDate(new Date());
+  ringProgress.style.strokeDasharray = String(ringLength);
+  modeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      mode = button.dataset.mode;
+      modeButtons.forEach((item) => item.classList.toggle("active", item === button));
+      updateStats();
+    });
+  });
+  updateButton.addEventListener("click", updateStats);
+  controlsForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    updateStats();
+  });
+  todayButton.addEventListener("click", () => {
+    currentDateInput.value = toInputDate(new Date());
+    updateStats();
+  });
+  ageButton.addEventListener("click", setDateFromAge);
+  copyButton.addEventListener("click", copySummary);
+  jumpButton.addEventListener("click", jumpToNow);
+  lifespanInput.addEventListener("input", updateStats);
+  calendarWrap.addEventListener("mousemove", inspectCalendar);
+  calendarWrap.addEventListener("mouseleave", hideTooltip);
+  window.addEventListener("resize", () => {
+    resizeAmbient();
+    if (stats) drawCalendar(false);
+  });
+  resizeAmbient();
+  cancelAnimationFrame(ambientFrame);
+  ambientFrame = requestAnimationFrame(animateAmbient);
+  updateStats();
+  setTimeout(jumpToNow, 700);
+}
+
+init();
