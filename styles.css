@@ -379,6 +379,15 @@ h2 {
   font-size: 1.12rem;
 }
 
+.event-card em {
+  display: block;
+  margin-top: 3px;
+  color: var(--teal);
+  font-size: 0.92rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .event-card button {
   position: absolute;
   top: 8px;

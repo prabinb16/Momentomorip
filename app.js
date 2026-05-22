@@ -208,11 +208,13 @@ function renderPersonalEvents() {
       <strong></strong>
       <span></span>
       <b></b>
+      <em></em>
       <button type="button" aria-label="Remove ${escapeHtml(event.title)}">x</button>
     `;
     card.querySelector("strong").textContent = event.title;
     card.querySelector("span").textContent = formatDate(targetDate);
     card.querySelector("b").textContent = formatCountdown(daysLeft);
+    card.querySelector("em").textContent = formatWeekCountdown(daysLeft);
     card.querySelector("button").addEventListener("click", () => deletePersonalEvent(event.id));
     eventList.append(card);
   });
@@ -222,6 +224,20 @@ function formatCountdown(daysLeft) {
   if (daysLeft === 0) return "Today";
   if (daysLeft > 0) return `${daysLeft.toLocaleString()} days left`;
   return `${Math.abs(daysLeft).toLocaleString()} days ago`;
+}
+
+function formatWeekCountdown(daysLeft) {
+  const absoluteDays = Math.abs(daysLeft);
+  const weeks = Math.floor(absoluteDays / 7);
+  const days = absoluteDays % 7;
+  const weekText = weeks === 1 ? "1 week" : `${weeks.toLocaleString()} weeks`;
+  const dayText = days === 1 ? "1 day" : `${days} days`;
+  const direction = daysLeft < 0 ? "ago" : "left";
+
+  if (daysLeft === 0) return "0 weeks, 0 days";
+  if (weeks === 0) return `${dayText} ${direction}`;
+  if (days === 0) return `${weekText} ${direction}`;
+  return `${weekText}, ${dayText} ${direction}`;
 }
 
 function escapeHtml(value) {
@@ -400,7 +416,7 @@ function copySummary() {
     `Next birthday: ${formatDate(stats.nextBirthday)}`,
     ...personalEvents.map((event) => {
       const daysLeft = daysBetween(stats.currentDate, parseLocalDate(event.date));
-      return `${event.title}: ${formatCountdown(daysLeft)} (${formatDate(parseLocalDate(event.date))})`;
+      return `${event.title}: ${formatCountdown(daysLeft)} / ${formatWeekCountdown(daysLeft)} (${formatDate(parseLocalDate(event.date))})`;
     }),
   ].join("\n");
   navigator.clipboard.writeText(summary);

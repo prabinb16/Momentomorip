@@ -28,4 +28,4 @@ The app defaults to a 90-year calendar. You can adjust the assumed lifespan and 
 
 ## Website
 
-Open `index.html` in a browser to use the animated web version. It has the same editable birth date, calendar date, age, lifespan, and day/week views. It also includes personal countdown dates for examinations, deadlines, trips, or anything else you want to track.
+Open `index.html` in a browser to use the animated web version. It has the same editable birth date, calendar date, age, lifespan, and day/week views. It also includes personal countdown dates for examinations, deadlines, trips, or anything else you want to track, showing both days and weeks left.
