@@ -3,7 +3,9 @@ const currentDateInput = document.querySelector("#currentDate");
 const ageYearsInput = document.querySelector("#ageYears");
 const ageDaysInput = document.querySelector("#ageDays");
 const lifespanInput = document.querySelector("#lifespan");
+const lifespanNumberInput = document.querySelector("#lifespanNumber");
 const lifespanValue = document.querySelector("#lifespanValue");
+const lifespanHint = document.querySelector("#lifespanHint");
 const updateButton = document.querySelector("#updateButton");
 const todayButton = document.querySelector("#todayButton");
 const ageButton = document.querySelector("#ageButton");
@@ -83,7 +85,7 @@ function formatShortDate(value) {
 function calculateStats() {
   const birthDate = parseLocalDate(birthDateInput.value);
   const currentDate = parseLocalDate(currentDateInput.value);
-  const lifespanYears = Number(lifespanInput.value);
+  const lifespanYears = normalizeLifespan(lifespanNumberInput.value);
   if (Number.isNaN(birthDate.getTime()) || Number.isNaN(currentDate.getTime())) {
     throw new Error("Use valid dates.");
   }
@@ -116,6 +118,12 @@ function calculateStats() {
   };
 }
 
+function normalizeLifespan(value) {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return 90;
+  return Math.min(150, Math.max(1, parsed));
+}
+
 function loadPersonalEvents() {
   try {
     const saved = JSON.parse(localStorage.getItem("mementoMoriPersonalDates") || "[]");
@@ -132,6 +140,8 @@ function savePersonalEvents() {
 function updateStats() {
   try {
     stats = calculateStats();
+    lifespanInput.value = String(stats.lifespanYears);
+    lifespanNumberInput.value = String(stats.lifespanYears);
     ageYearsInput.value = stats.ageYears;
     ageDaysInput.value = stats.ageDays;
     lifespanValue.textContent = stats.lifespanYears;
@@ -143,11 +153,26 @@ function updateStats() {
     const percent = stats.progress * 100;
     progressPercent.textContent = `${percent.toFixed(1)}%`;
     ringProgress.style.strokeDashoffset = String(ringLength * (1 - stats.progress));
+    updateLifespanHint();
+    document.body.dataset.urgency = stats.progress > 0.8 ? "high" : stats.progress > 0.55 ? "medium" : "calm";
     statusText.textContent = `Showing one square per ${mode}. Hover any square for details.`;
     renderPersonalEvents();
     drawCalendar(true);
   } catch (error) {
     statusText.textContent = error.message;
+  }
+}
+
+function updateLifespanHint() {
+  const difference = stats.lifespanYears - stats.ageYears;
+  if (difference < 0) {
+    lifespanHint.textContent = `This target is already ${Math.abs(difference)} years behind your current age.`;
+  } else if (difference === 0) {
+    lifespanHint.textContent = "This target is your current age. The calendar is fully urgent.";
+  } else if (difference <= 5) {
+    lifespanHint.textContent = `${difference} years remain in this target. Very urgent mode.`;
+  } else {
+    lifespanHint.textContent = `${difference} years remain in this target lifespan.`;
   }
 }
 
@@ -475,6 +500,11 @@ function init() {
       updateStats();
     });
   });
+  lifespanNumberInput.addEventListener("change", () => {
+    lifespanNumberInput.value = String(normalizeLifespan(lifespanNumberInput.value));
+    lifespanInput.value = lifespanNumberInput.value;
+    updateStats();
+  });
   updateButton.addEventListener("click", updateStats);
   controlsForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -488,7 +518,10 @@ function init() {
   copyButton.addEventListener("click", copySummary);
   addEventButton.addEventListener("click", addPersonalEvent);
   jumpButton.addEventListener("click", jumpToNow);
-  lifespanInput.addEventListener("input", updateStats);
+  lifespanInput.addEventListener("input", () => {
+    lifespanNumberInput.value = lifespanInput.value;
+    updateStats();
+  });
   calendarWrap.addEventListener("mousemove", inspectCalendar);
   calendarWrap.addEventListener("mouseleave", hideTooltip);
   window.addEventListener("resize", () => {
