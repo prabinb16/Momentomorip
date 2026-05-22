@@ -197,7 +197,7 @@ function renderPersonalEvents() {
 
   const nearest = sorted[0];
   const nearestDays = daysBetween(currentDate, parseLocalDate(nearest.date));
-  eventHeadline.textContent = `${nearest.title}: ${formatCountdown(nearestDays)}`;
+  eventHeadline.textContent = `${nearest.title}: ${formatCountdown(nearestDays)} / ${formatWeekCountdown(nearestDays)}`;
 
   sorted.slice(0, 6).forEach((event) => {
     const targetDate = parseLocalDate(event.date);
@@ -250,7 +250,7 @@ function drawCalendar(animate = false) {
   cancelAnimationFrame(animationFrame);
   const wrapWidth = Math.max(calendarWrap.clientWidth, 720);
   const rowGap = mode === "day" ? 5 : 9;
-  const cell = mode === "day" ? 4 : Math.max(8, Math.min(13, Math.floor((wrapWidth - 120) / 60)));
+  const cell = mode === "day" ? Math.max(3, Math.min(5, Math.floor((wrapWidth - 140) / 390))) : Math.max(8, Math.min(13, Math.floor((wrapWidth - 120) / 60)));
   const gap = mode === "day" ? 1 : 4;
   const columns = mode === "day" ? 366 : 52;
   const left = 54;
@@ -455,6 +455,13 @@ function animateAmbient(now) {
     ambient.arc(x, y, radius, 0, Math.PI * 2);
     ambient.fill();
   }
+  const sweep = ambient.createLinearGradient(0, 0, innerWidth, innerHeight);
+  const pulse = (Math.sin(now / 1800) + 1) / 2;
+  sweep.addColorStop(0, `rgba(56,189,248,${0.02 + pulse * 0.035})`);
+  sweep.addColorStop(0.5, "rgba(20,184,166,0)");
+  sweep.addColorStop(1, `rgba(245,158,11,${0.018 + pulse * 0.03})`);
+  ambient.fillStyle = sweep;
+  ambient.fillRect(0, 0, innerWidth, innerHeight);
   ambientFrame = requestAnimationFrame(animateAmbient);
 }
 

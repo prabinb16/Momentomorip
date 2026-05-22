@@ -1,18 +1,24 @@
 :root {
   color-scheme: dark;
   --bg: #090b10;
-  --panel: rgba(18, 22, 32, 0.82);
-  --panel-solid: #121620;
+  --panel: rgba(15, 18, 27, 0.78);
+  --panel-strong: rgba(21, 26, 39, 0.92);
+  --panel-soft: rgba(255, 255, 255, 0.055);
+  --panel-hover: rgba(255, 255, 255, 0.085);
   --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.2);
   --text: #f8fafc;
   --muted: #a1a1aa;
   --blue: #38bdf8;
-  --violet: #8b5cf6;
+  --indigo: #6366f1;
   --amber: #f59e0b;
   --teal: #14b8a6;
   --rose: #fb7185;
+  --green: #84cc16;
   --lived: #71717a;
   --future: #14b8a6;
+  --shadow: 0 28px 90px rgba(0, 0, 0, 0.46);
+  --radius: 8px;
 }
 
 * {
@@ -26,14 +32,33 @@ body {
 
 body {
   margin: 0;
+  min-width: 320px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.18), transparent 30%),
-    radial-gradient(circle at 80% 18%, rgba(251, 113, 133, 0.12), transparent 28%),
-    radial-gradient(circle at 58% 84%, rgba(20, 184, 166, 0.16), transparent 30%),
+    radial-gradient(circle at 16% 10%, rgba(56, 189, 248, 0.16), transparent 32%),
+    radial-gradient(circle at 82% 12%, rgba(251, 113, 133, 0.13), transparent 30%),
+    radial-gradient(circle at 50% 92%, rgba(132, 204, 22, 0.09), transparent 30%),
+    linear-gradient(135deg, rgba(20, 184, 166, 0.08), transparent 38%, rgba(245, 158, 11, 0.06)),
     var(--bg);
   color: var(--text);
   font-family: "Segoe UI", Inter, system-ui, sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at 50% 40%, black, transparent 72%);
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.34);
 }
 
 button,
@@ -46,25 +71,43 @@ input {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.72;
+  opacity: 0.82;
 }
 
 .app-shell {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 18px;
-  height: 100vh;
-  padding: 18px;
+  grid-template-columns: minmax(310px, 380px) minmax(0, 1fr);
+  gap: clamp(12px, 2vw, 20px);
+  height: 100dvh;
+  padding: clamp(10px, 2vw, 20px);
 }
 
 .control-panel,
 .calendar-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--panel);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  box-shadow: var(--shadow);
   backdrop-filter: blur(22px);
+  animation: panel-in 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.control-panel::before,
+.calendar-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(120deg, rgba(56, 189, 248, 0.22), transparent 26%),
+    linear-gradient(300deg, rgba(251, 113, 133, 0.14), transparent 28%);
+  opacity: 0.7;
+  mask-image: linear-gradient(black, transparent 58%);
 }
 
 .control-panel {
@@ -73,6 +116,7 @@ input {
   gap: 18px;
   overflow: auto;
   padding: 22px;
+  animation-delay: 80ms;
 }
 
 .calendar-panel {
@@ -81,9 +125,12 @@ input {
   flex-direction: column;
   overflow: hidden;
   padding: 22px;
+  animation-delay: 160ms;
 }
 
 .brand {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -92,11 +139,13 @@ input {
 .brand-mark {
   width: 46px;
   height: 46px;
+  flex: 0 0 auto;
+  border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.18);
   background:
-    conic-gradient(from 180deg, var(--blue), var(--violet), var(--rose), var(--amber), var(--teal), var(--blue));
+    conic-gradient(from 180deg, var(--blue), var(--indigo), var(--rose), var(--amber), var(--teal), var(--blue));
   box-shadow: 0 0 40px rgba(56, 189, 248, 0.28);
-  animation: slow-spin 10s linear infinite;
+  animation: slow-spin 10s linear infinite, mark-pulse 2.8s ease-in-out infinite;
 }
 
 h1,
@@ -106,7 +155,7 @@ p {
 }
 
 h1 {
-  font-size: clamp(1.55rem, 3vw, 2.1rem);
+  font-size: clamp(1.55rem, 1.8rem, 2.1rem);
   line-height: 1;
 }
 
@@ -120,10 +169,16 @@ label span,
 }
 
 .progress-ring {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 120px 1fr;
   align-items: center;
   gap: 16px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
+  padding: 12px;
 }
 
 .progress-ring svg {
@@ -158,6 +213,8 @@ label span,
 }
 
 .controls {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 13px;
 }
@@ -175,6 +232,7 @@ label span {
 
 input {
   width: 100%;
+  border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.075);
   color: var(--text);
@@ -187,6 +245,10 @@ input:focus {
   border-color: rgba(56, 189, 248, 0.8);
   background: rgba(255, 255, 255, 0.1);
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+}
+
+input:hover {
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 input[type="range"] {
@@ -206,11 +268,13 @@ input[type="range"] {
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 4px;
+  border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.055);
 }
 
 button {
+  border-radius: var(--radius);
   border: 0;
   background: rgba(255, 255, 255, 0.095);
   color: var(--text);
@@ -224,6 +288,12 @@ button:hover {
   transform: translateY(-1px);
 }
 
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.92);
+  outline-offset: 2px;
+}
+
 button:active {
   transform: translateY(1px);
 }
@@ -231,11 +301,13 @@ button:active {
 .segmented button.active,
 .button-row button:first-child,
 #jumpButton {
-  background: linear-gradient(135deg, var(--blue), var(--violet));
+  background: linear-gradient(135deg, var(--blue), var(--indigo) 48%, var(--rose));
   box-shadow: 0 14px 32px rgba(56, 189, 248, 0.16);
 }
 
 .legend {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -243,6 +315,8 @@ button:active {
 }
 
 .event-editor {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -274,6 +348,7 @@ button:active {
 .legend i {
   width: 12px;
   height: 12px;
+  border-radius: 3px;
   display: inline-block;
 }
 
@@ -290,6 +365,8 @@ button:active {
 }
 
 .topbar {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -305,18 +382,22 @@ button:active {
 }
 
 h2 {
-  font-size: clamp(1.8rem, 4vw, 3.1rem);
+  font-size: clamp(1.8rem, 2.4rem, 3.1rem);
   line-height: 1;
 }
 
 .stats {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin: 18px 0;
 }
 
 .events-panel {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 12px;
   margin-bottom: 16px;
@@ -337,16 +418,24 @@ h2 {
 
 .event-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 
 .event-card {
   position: relative;
   overflow: hidden;
+  border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.055);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035));
   padding: 13px 42px 13px 14px;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.event-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  background: var(--panel-hover);
 }
 
 .event-card::before {
@@ -399,10 +488,29 @@ h2 {
 }
 
 .stats article {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.055);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.078), rgba(255, 255, 255, 0.036));
   padding: 14px;
   min-width: 0;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.stats article::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--blue), var(--teal), var(--amber));
+  opacity: 0.55;
+}
+
+.stats article:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  background: var(--panel-hover);
 }
 
 .stats span {
@@ -424,15 +532,18 @@ h2 {
 
 .calendar-wrap {
   position: relative;
+  z-index: 1;
   min-height: 0;
   flex: 1;
   overflow: auto;
+  border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     rgba(3, 7, 18, 0.68);
   background-size: 40px 40px;
+  scroll-behavior: smooth;
 }
 
 #calendarCanvas {
@@ -444,6 +555,7 @@ h2 {
   z-index: 5;
   display: none;
   max-width: 260px;
+  border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(9, 11, 16, 0.92);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
@@ -464,13 +576,56 @@ h2 {
 }
 
 .status {
+  position: relative;
+  z-index: 1;
   min-height: 24px;
   padding-top: 12px;
+}
+
+.control-panel::-webkit-scrollbar,
+.calendar-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.control-panel::-webkit-scrollbar-track,
+.calendar-wrap::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.control-panel::-webkit-scrollbar-thumb,
+.calendar-wrap::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(9, 11, 16, 0.68);
+  border-radius: 999px;
+  background: linear-gradient(var(--blue), var(--teal));
 }
 
 @keyframes slow-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes mark-pulse {
+  0%,
+  100% {
+    filter: saturate(1);
+  }
+
+  50% {
+    filter: saturate(1.35) brightness(1.14);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -485,8 +640,12 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .control-panel {
+    max-height: none;
+  }
+
   .calendar-panel {
-    min-height: 720px;
+    min-height: min(760px, 100dvh);
   }
 
   .stats {
@@ -508,7 +667,6 @@ h2 {
     padding: 14px;
   }
 
-  .topbar,
   .progress-ring {
     grid-template-columns: 1fr;
   }
@@ -522,5 +680,16 @@ h2 {
   .stats,
   .event-list {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
   }
 }
