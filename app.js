@@ -21,11 +21,16 @@ const eventList = document.querySelector("#eventList");
 const modeButtons = document.querySelectorAll("[data-mode]");
 const ringProgress = document.querySelector("#ringProgress");
 const progressPercent = document.querySelector("#progressPercent");
+const greeting = document.querySelector("#greeting");
 const headline = document.querySelector("#headline");
 const statAge = document.querySelector("#statAge");
 const statLived = document.querySelector("#statLived");
 const statLeft = document.querySelector("#statLeft");
 const statBirthday = document.querySelector("#statBirthday");
+const ageBar = document.querySelector("#ageBar");
+const livedBar = document.querySelector("#livedBar");
+const leftBar = document.querySelector("#leftBar");
+const birthdayBar = document.querySelector("#birthdayBar");
 const statusText = document.querySelector("#status");
 const calendarWrap = document.querySelector("#calendarWrap");
 const canvas = document.querySelector("#calendarCanvas");
@@ -33,6 +38,9 @@ const ctx = canvas.getContext("2d");
 const tooltip = document.querySelector("#tooltip");
 const ambientCanvas = document.querySelector("#ambientCanvas");
 const ambient = ambientCanvas.getContext("2d");
+const zoomInButton = document.querySelector("#zoomInButton");
+const zoomOutButton = document.querySelector("#zoomOutButton");
+const resetButton = document.querySelector("#resetButton");
 
 const dayMs = 24 * 60 * 60 * 1000;
 const ringLength = 2 * Math.PI * 52;
@@ -42,6 +50,8 @@ let stats = null;
 let animationFrame = 0;
 let ambientFrame = 0;
 let personalEvents = loadPersonalEvents();
+let editingEventId = null;
+let dotScale = 1;
 
 function parseLocalDate(value) {
   const [year, month, day] = value.split("-").map(Number);
@@ -145,14 +155,16 @@ function updateStats() {
     ageYearsInput.value = stats.ageYears;
     ageDaysInput.value = stats.ageDays;
     lifespanValue.textContent = stats.lifespanYears;
-    headline.textContent = `${stats.ageYears} years old`;
-    statAge.textContent = `${stats.ageYears}y ${stats.ageDays}d`;
+    greeting.textContent = `${timeGreeting()}, Prabin`;
+    headline.textContent = "Here is your life at a glance.";
+    statAge.textContent = `${stats.ageYears} years, ${stats.ageDays} days`;
     statLived.textContent = stats.daysLived.toLocaleString();
     statLeft.textContent = stats.daysRemaining.toLocaleString();
     statBirthday.textContent = formatShortDate(stats.nextBirthday);
     const percent = stats.progress * 100;
     progressPercent.textContent = `${percent.toFixed(1)}%`;
     ringProgress.style.strokeDashoffset = String(ringLength * (1 - stats.progress));
+    updateStatBars();
     updateLifespanHint();
     document.body.dataset.urgency = stats.progress > 0.8 ? "high" : stats.progress > 0.55 ? "medium" : "calm";
     statusText.textContent = `Showing one square per ${mode}. Hover any square for details.`;
@@ -161,6 +173,24 @@ function updateStats() {
   } catch (error) {
     statusText.textContent = error.message;
   }
+}
+
+function timeGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function updateStatBars() {
+  const progress = Math.round(stats.progress * 100);
+  const leftProgress = Math.max(4, 100 - progress);
+  const birthdayDistance = Math.max(0, daysBetween(stats.currentDate, stats.nextBirthday));
+  const birthdayProgress = Math.max(4, Math.min(100, Math.round(((365 - birthdayDistance) / 365) * 100)));
+  ageBar.style.setProperty("--value", `${Math.max(4, progress)}%`);
+  livedBar.style.setProperty("--value", `${Math.max(4, progress)}%`);
+  leftBar.style.setProperty("--value", `${leftProgress}%`);
+  birthdayBar.style.setProperty("--value", `${birthdayProgress}%`);
 }
 
 function updateLifespanHint() {
@@ -183,23 +213,41 @@ function addPersonalEvent() {
     statusText.textContent = "Choose a target date for your personal countdown.";
     return;
   }
-  personalEvents.push({
-    id: globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    title,
-    date: dateValue,
-  });
+  if (editingEventId) {
+    personalEvents = personalEvents.map((event) => {
+      return event.id === editingEventId ? { ...event, title, date: dateValue } : event;
+    });
+    editingEventId = null;
+    addEventButton.textContent = "Add Personal Date";
+  } else {
+    personalEvents.push({
+      id: globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      title,
+      date: dateValue,
+    });
+  }
   personalEvents.sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date));
   savePersonalEvents();
   eventTitleInput.value = "";
   eventDateInput.value = "";
   renderPersonalEvents();
-  statusText.textContent = `${title} added to personal dates.`;
+  statusText.textContent = `${title} saved to personal dates.`;
 }
 
 function deletePersonalEvent(id) {
   personalEvents = personalEvents.filter((event) => event.id !== id);
   savePersonalEvents();
   renderPersonalEvents();
+}
+
+function editPersonalEvent(id) {
+  const event = personalEvents.find((item) => item.id === id);
+  if (!event) return;
+  editingEventId = id;
+  eventTitleInput.value = event.title;
+  eventDateInput.value = event.date;
+  addEventButton.textContent = "Save Personal Date";
+  eventTitleInput.focus();
 }
 
 function renderPersonalEvents() {
@@ -215,7 +263,7 @@ function renderPersonalEvents() {
     eventHeadline.textContent = "No personal dates yet";
     const empty = document.createElement("article");
     empty.className = "event-card";
-    empty.innerHTML = "<strong>Add an examination date</strong><span>Your countdown will appear here.</span><b>Ready when you are</b>";
+    empty.innerHTML = "<div><strong>Add an examination date</strong><span>Your countdown will appear here.</span><b>Ready when you are</b></div>";
     eventList.append(empty);
     return;
   }
@@ -230,17 +278,23 @@ function renderPersonalEvents() {
     const card = document.createElement("article");
     card.className = "event-card";
     card.innerHTML = `
-      <strong></strong>
-      <span></span>
-      <b></b>
-      <em></em>
-      <button type="button" aria-label="Remove ${escapeHtml(event.title)}">x</button>
+      <div>
+        <strong></strong>
+        <span></span>
+        <b></b>
+        <em></em>
+      </div>
+      <div class="event-actions">
+        <button type="button" class="edit-event" aria-label="Edit ${escapeHtml(event.title)}">E</button>
+        <button type="button" class="delete-event" aria-label="Remove ${escapeHtml(event.title)}">X</button>
+      </div>
     `;
     card.querySelector("strong").textContent = event.title;
     card.querySelector("span").textContent = formatDate(targetDate);
     card.querySelector("b").textContent = formatCountdown(daysLeft);
     card.querySelector("em").textContent = formatWeekCountdown(daysLeft);
-    card.querySelector("button").addEventListener("click", () => deletePersonalEvent(event.id));
+    card.querySelector(".edit-event").addEventListener("click", () => editPersonalEvent(event.id));
+    card.querySelector(".delete-event").addEventListener("click", () => deletePersonalEvent(event.id));
     eventList.append(card);
   });
 }
@@ -274,13 +328,13 @@ function escapeHtml(value) {
 function drawCalendar(animate = false) {
   cancelAnimationFrame(animationFrame);
   const wrapWidth = Math.max(calendarWrap.clientWidth, 720);
-  const rowGap = mode === "day" ? 5 : 9;
-  const cell = mode === "day" ? Math.max(3, Math.min(5, Math.floor((wrapWidth - 140) / 390))) : Math.max(8, Math.min(13, Math.floor((wrapWidth - 120) / 60)));
-  const gap = mode === "day" ? 1 : 4;
+  const rowGap = mode === "day" ? Math.round(7 * dotScale) : Math.round(12 * dotScale);
+  const cell = mode === "day" ? Math.max(3, Math.min(6, Math.floor((wrapWidth - 150) / 410))) * dotScale : Math.max(7, Math.min(11, Math.floor((wrapWidth - 130) / 68))) * dotScale;
+  const gap = mode === "day" ? Math.max(2, Math.round(2 * dotScale)) : Math.max(3, Math.round(4 * dotScale));
   const columns = mode === "day" ? 366 : 52;
-  const left = 54;
-  const top = 28;
-  const label = 42;
+  const left = 42;
+  const top = 26;
+  const label = 34;
   const width = left + label + columns * (cell + gap) + 140;
   const height = top + stats.lifespanYears * (cell + rowGap) + 42;
   const dpr = window.devicePixelRatio || 1;
@@ -307,7 +361,7 @@ function drawCalendar(animate = false) {
 
 function paintCalendar(reveal) {
   ctx.clearRect(0, 0, metrics.width, metrics.height);
-  ctx.font = "700 9px Segoe UI, sans-serif";
+  ctx.font = "700 10px Segoe UI, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
 
@@ -316,7 +370,7 @@ function paintCalendar(reveal) {
     const rowReveal = Math.min(1, Math.max(0, reveal * stats.lifespanYears - year));
     if (rowReveal <= 0) continue;
 
-    ctx.fillStyle = year % 5 === 0 ? "#d4d4d8" : "#52525b";
+    ctx.fillStyle = year % 10 === 0 ? "#dbe4ff" : year % 5 === 0 ? "#94a3b8" : "rgba(148, 163, 184, 0.32)";
     ctx.globalAlpha = 0.45 + rowReveal * 0.55;
     ctx.fillText(String(year).padStart(2, "0"), metrics.left, y + metrics.cell / 2);
 
@@ -361,18 +415,25 @@ function drawSquare(column, y, color, isNow) {
   const x = metrics.left + metrics.label + column * (metrics.cell + metrics.gap);
   ctx.globalAlpha = 1;
   ctx.fillStyle = color.fill;
-  ctx.fillRect(x, y, metrics.cell, metrics.cell);
+  ctx.beginPath();
+  ctx.arc(x + metrics.cell / 2, y + metrics.cell / 2, metrics.cell / 2, 0, Math.PI * 2);
+  ctx.fill();
   if (isNow) {
-    ctx.strokeStyle = "#fde68a";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(x - 1, y - 1, metrics.cell + 2, metrics.cell + 2);
+    ctx.shadowColor = "#2dd4bf";
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = "#2dd4bf";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + metrics.cell / 2, y + metrics.cell / 2, metrics.cell * 1.2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
   }
 }
 
 function colorFor(index, currentIndex) {
-  if (index < currentIndex) return { fill: "#71717a" };
-  if (index === currentIndex) return { fill: "#f59e0b" };
-  return { fill: "#14b8a6" };
+  if (index < currentIndex) return { fill: "#5664ff" };
+  if (index === currentIndex) return { fill: "#2dd4bf" };
+  return { fill: "#32384f" };
 }
 
 function periodState(index, currentIndex) {
@@ -458,6 +519,11 @@ function jumpToNow() {
   }
 }
 
+function adjustZoom(delta) {
+  dotScale = Math.max(0.75, Math.min(1.7, dotScale + delta));
+  drawCalendar(false);
+}
+
 function resizeAmbient() {
   const dpr = window.devicePixelRatio || 1;
   ambientCanvas.width = Math.floor(innerWidth * dpr);
@@ -469,7 +535,7 @@ function resizeAmbient() {
 
 function animateAmbient(now) {
   ambient.clearRect(0, 0, innerWidth, innerHeight);
-  const count = Math.max(32, Math.floor(innerWidth / 28));
+  const count = Math.max(42, Math.floor(innerWidth / 22));
   for (let i = 0; i < count; i += 1) {
     const seed = i * 97.13;
     const x = (Math.sin(seed) * 0.5 + 0.5) * innerWidth + Math.sin(now / 2400 + i) * 18;
@@ -518,6 +584,13 @@ function init() {
   copyButton.addEventListener("click", copySummary);
   addEventButton.addEventListener("click", addPersonalEvent);
   jumpButton.addEventListener("click", jumpToNow);
+  zoomInButton.addEventListener("click", () => adjustZoom(0.15));
+  zoomOutButton.addEventListener("click", () => adjustZoom(-0.15));
+  resetButton.addEventListener("click", () => {
+    dotScale = 1;
+    drawCalendar(false);
+    jumpToNow();
+  });
   lifespanInput.addEventListener("input", () => {
     lifespanNumberInput.value = lifespanInput.value;
     updateStats();

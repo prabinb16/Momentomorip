@@ -28,4 +28,4 @@ The app defaults to a 90-year calendar. You can adjust the assumed lifespan and 
 
 ## Website
 
-Open `index.html` in a browser to use the animated web version. It has the same editable birth date, calendar date, age, lifespan, and day/week views. It also includes personal countdown dates for examinations, deadlines, trips, or anything else you want to track, showing both days and weeks left. The lifespan target can be set from 1 to 150 years, so you can make the calendar feel more urgent. The website uses a flexible dark animated layout that adapts across desktop, tablet, and mobile screens.
+Open `index.html` in a browser to use the animated web version. It has a dark dashboard layout inspired by modern life-calendar apps, with a left icon rail, control sidebar, stat cards, personal countdown cards, and a dot-grid calendar. It includes editable birth date, calendar date, age, lifespan, day/week views, and personal countdown dates that show both days and weeks left. The lifespan target can be set from 1 to 150 years, so you can make the calendar feel more urgent.

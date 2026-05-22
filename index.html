@@ -5,22 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#090b10" />
     <title>Memento Mori Calendar</title>
-    <link rel="stylesheet" href="styles.css?v=4" />
+    <link rel="stylesheet" href="styles.css?v=5" />
   </head>
   <body>
     <canvas id="ambientCanvas" aria-hidden="true"></canvas>
     <div class="motion-ribbons" aria-hidden="true"></div>
     <main class="app-shell">
+      <nav class="icon-rail" aria-label="App navigation">
+        <span class="orb-logo" aria-hidden="true"></span>
+        <a class="rail-button active" href="#calendarWrap" aria-label="Dashboard">H</a>
+        <a class="rail-button" href="#controls" aria-label="Calendar settings">C</a>
+        <a class="rail-button" href="#eventList" aria-label="Personal dates">L</a>
+        <a class="rail-button" href="#calendarWrap" aria-label="Goals">O</a>
+        <a class="rail-button" href="#calendarWrap" aria-label="Progress">G</a>
+        <span class="rail-spacer"></span>
+        <button class="rail-button" type="button" aria-label="Settings">S</button>
+        <button class="rail-button" type="button" aria-label="Dark mode">M</button>
+      </nav>
+
       <section class="control-panel" aria-label="Calendar controls">
         <div class="brand">
           <span class="brand-mark"></span>
           <div>
-            <h1>Memento Mori</h1>
-            <p>A living calendar made of days.</p>
+            <h1>Life Calendar</h1>
+            <p>Visualize your life. Focus on what matters.</p>
           </div>
         </div>
 
-        <div class="progress-ring" aria-label="Life progress">
+        <div class="progress-ring compact" aria-label="Life progress">
           <svg viewBox="0 0 120 120" role="img">
             <circle class="ring-track" cx="60" cy="60" r="52"></circle>
             <circle id="ringProgress" class="ring-progress" cx="60" cy="60" r="52"></circle>
@@ -106,28 +118,44 @@
       <section class="calendar-panel" aria-label="Life calendar">
         <div class="topbar">
           <div>
-            <p class="eyebrow">Your Life Calendar</p>
-            <h2 id="headline">26 years old</h2>
+            <h2 id="greeting">Good evening, Prabin</h2>
+            <p id="headline">Here is your life at a glance.</p>
           </div>
-          <button id="jumpButton" type="button">Jump to Now</button>
+          <button id="jumpButton" class="primary-action" type="button">Jump to Now</button>
         </div>
 
         <div class="stats" aria-label="Life statistics">
-          <article>
-            <span>Age</span>
-            <strong id="statAge">26y 0d</strong>
+          <article class="stat-card stat-age">
+            <i aria-hidden="true">A</i>
+            <div>
+              <span>Current Age</span>
+              <strong id="statAge">26y 0d</strong>
+              <div class="stat-track"><b id="ageBar"></b></div>
+            </div>
           </article>
-          <article>
-            <span>Days lived</span>
-            <strong id="statLived">0</strong>
+          <article class="stat-card stat-lived">
+            <i aria-hidden="true">D</i>
+            <div>
+              <span>Days Lived</span>
+              <strong id="statLived">0</strong>
+              <div class="stat-track"><b id="livedBar"></b></div>
+            </div>
           </article>
-          <article>
-            <span>Days left</span>
-            <strong id="statLeft">0</strong>
+          <article class="stat-card stat-left">
+            <i aria-hidden="true">L</i>
+            <div>
+              <span>Days Left</span>
+              <strong id="statLeft">0</strong>
+              <div class="stat-track"><b id="leftBar"></b></div>
+            </div>
           </article>
-          <article>
-            <span>Next birthday</span>
-            <strong id="statBirthday">Apr 16</strong>
+          <article class="stat-card stat-birthday">
+            <i aria-hidden="true">B</i>
+            <div>
+              <span>Next Birthday</span>
+              <strong id="statBirthday">Apr 16</strong>
+              <div class="stat-track"><b id="birthdayBar"></b></div>
+            </div>
           </article>
         </div>
 
@@ -142,14 +170,32 @@
           <div id="eventList" class="event-list"></div>
         </section>
 
-        <div id="calendarWrap" class="calendar-wrap">
-          <canvas id="calendarCanvas"></canvas>
-          <div id="tooltip" class="tooltip" role="status"></div>
-        </div>
+        <section class="calendar-card" aria-label="Dot calendar">
+          <div class="calendar-heading">
+            <h3>Your Life Calendar</h3>
+            <div class="legend compact-legend" aria-label="Legend">
+              <span><i class="lived"></i>Lived</span>
+              <span><i class="now"></i>Now</span>
+              <span><i class="future"></i>Ahead</span>
+            </div>
+          </div>
 
-        <p id="status" class="status">Hover the calendar to inspect a day.</p>
+          <div id="calendarWrap" class="calendar-wrap">
+            <canvas id="calendarCanvas"></canvas>
+            <div id="tooltip" class="tooltip" role="status"></div>
+          </div>
+
+          <div class="calendar-footer">
+            <p id="status" class="status">Hover the calendar to inspect a day.</p>
+            <div class="zoom-actions" aria-label="Calendar actions">
+              <button type="button" id="zoomOutButton">-</button>
+              <button type="button" id="zoomInButton">+</button>
+              <button type="button" id="resetButton">Reset</button>
+            </div>
+          </div>
+        </section>
       </section>
     </main>
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
   </body>
 </html>
